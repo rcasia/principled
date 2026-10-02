@@ -56,9 +56,20 @@ jobs:
             fi
             echo "analyzed $file (exit $code)"
           done < changed.txt
-      - name: Upload findings to code scanning
+      - name: Combine findings
         if: hashFiles('sarif/*.sarif') != ''
+        run: |
+          jq -s '
+            .[0] as $first |
+            {
+              "$schema": $first["$schema"],
+              version: $first.version,
+              runs: (map(.runs) | add)
+            }
+          ' sarif/*.sarif > combined.sarif
+      - name: Upload findings to code scanning
+        if: hashFiles('combined.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           # sarif_file is the supported input; path is ignored by CodeQL.
-          sarif_file: sarif/
+          sarif_file: combined.sarif
