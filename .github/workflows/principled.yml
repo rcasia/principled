@@ -64,7 +64,11 @@ jobs:
             {
               "$schema": $first["$schema"],
               version: $first.version,
-              runs: (map(.runs) | add)
+              runs: [
+                ($first.runs[0] + {
+                  results: (map(.runs[].results) | add)
+                })
+              ]
             }
           ' sarif/*.sarif > combined.sarif
       - name: Upload findings to code scanning
