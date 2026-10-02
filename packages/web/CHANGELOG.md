@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/rcasia/principled/compare/web-v1.22.0...web-v1.22.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **ci:** upload SARIF via sarif_file, not path ([#57](https://github.com/rcasia/principled/issues/57)) ([9add6e1](https://github.com/rcasia/principled/commit/9add6e13f511fa52020e73e4090d77f69fef0f80))
+
 # [1.22.0](https://github.com/rcasia/principled/compare/web-v1.21.1...web-v1.22.0) (2026-09-26)
 
 
