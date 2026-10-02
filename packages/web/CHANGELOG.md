@@ -1,3 +1,10 @@
+## [1.22.2](https://github.com/rcasia/principled/compare/web-v1.22.1...web-v1.22.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **deps:** revert red dependency merge ([8a34ace](https://github.com/rcasia/principled/commit/8a34ace73a8893c406f4fc11e25d44f19e508fea))
+
 ## [1.22.1](https://github.com/rcasia/principled/compare/web-v1.22.0...web-v1.22.1) (2026-10-02)
 
 
