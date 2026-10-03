@@ -1,3 +1,12 @@
+## [1.20.3](https://github.com/rcasia/principled/compare/v1.20.2...v1.20.3) (2026-10-03)
+
+
+### Bug Fixes
+
+* **ci:** keep Dependabot updates green ([cef05d7](https://github.com/rcasia/principled/commit/cef05d72a49da194b21c6e5769a637df9279a5f3)), closes [#PR](https://github.com/rcasia/principled/issues/PR)
+* **deps:** ignore unpatched audit advisories ([878d542](https://github.com/rcasia/principled/commit/878d542055946d22d50b9d662e309d81f04b1769))
+* **deps:** pin TypeScript to 5.x for Stryker ([40a0a13](https://github.com/rcasia/principled/commit/40a0a13cc82610ab4368b2f037c369b8f3b65d85)), closes [#60](https://github.com/rcasia/principled/issues/60)
+
 ## [1.20.2](https://github.com/rcasia/principled/compare/v1.20.1...v1.20.2) (2026-10-02)
 
 
