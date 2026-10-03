@@ -1,7 +1,9 @@
 # Mutation testing, standalone and advisory. Split out of `gates.yml`
 # (ADR-0038): the score is reported but never holds up delivery — the trunk
 # stays protected by typecheck, tests, review and the deployment gates.
-# Runs on pushes to main and on demand; pull requests are intentionally not
+# Push runs test only the files changed by the push (ADR-0046), so
+# agent-sized diffs finish in minutes instead of ~1.5h; a weekly full run
+# keeps the global score honest. Pull requests are intentionally not
 # triggered until the score is a gate again.
 name: mutation
 
@@ -9,6 +11,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Weekly full run: the global score, including drift that diff-scoped
+    # push runs intentionally skip (dependency updates, config edits), is
+    # re-verified here. Mondays 02:00 UTC; audit runs 06:00, no conflict.
+    - cron: "0 2 * * 1"
 
 permissions:
   contents: read
@@ -16,7 +23,9 @@ permissions:
 concurrency:
   # Queue, never cancel: a new push waits behind the running mutation run
   # instead of superseding it, so every main commit eventually gets its
-  # score without two runs overlapping.
+  # score without two runs overlapping. Push runs now finish in
+  # seconds–minutes (ADR-0046), so the queue drains instead of piling up
+  # hour-long runs.
   group: mutation-${{ github.ref }}
   cancel-in-progress: false
 
@@ -27,8 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history: the force-on-test-change guard below diffs against
-          # the base commit, and the incremental cache is keyed per commit.
+          # Full history: push runs diff the push base against HEAD.
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
@@ -38,70 +46,52 @@ jobs:
         with:
           node-version: "22"
       - run: bun install --frozen-lockfile
-      # Best-effort cache of the previous incremental report. A miss simply
-      # means a full run; Stryker reports "no incremental result file found".
-      - name: Restore Stryker incremental cache
-        uses: actions/cache/restore@v6
-        with:
-          path: reports/stryker-incremental.json
-          key: stryker-incremental-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            stryker-incremental-main-
-            stryker-incremental-
-      # Snapshot the restored report's hash. Stryker exits non-zero both
-      # when the score is below the break threshold (a valid, fresh report
-      # worth caching) and when it crashes writing the report (nothing new
-      # on disk). The hash comparison below tells the two apart, so the
-      # save is gated on the file changing, not on the step succeeding.
-      - name: Snapshot incremental report hash
-        id: incremental-before
-        run: |
-          if [ -f reports/stryker-incremental.json ]; then
-            echo "hash=$(sha256sum reports/stryker-incremental.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-          else
-            echo "hash=missing" >> "$GITHUB_OUTPUT"
-          fi
-      # The command runner reports no test coverage, so incremental mode can
-      # only see mutant changes, never test changes (ADR-0021): when test
-      # files, dependencies or the Stryker config itself changed, force a
-      # full run instead of reusing results the new tests might have killed.
-      # No --incremental on the forced run: at this suite size Stryker 10
-      # crashes serializing the full incremental report (RangeError: Invalid
-      # string length in writeIncrementalReport) after every mutant passed.
+      # Scope: the schedule (and manual dispatch, an explicit opt-in to the
+      # global signal) runs everything. Pushes test only changed sources,
+      # with changed tests mapped to the source they cover (the repo keeps
+      # tests colocated as foo.test.ts next to foo.ts). No --incremental
+      # anywhere in CI: at this suite size Stryker 10 crashes serializing
+      # the full incremental report (RangeError), and fresh subset reports
+      # are small. Local opt-in via `bun run test:mutation:incremental`
+      # is untouched.
       - name: Run mutation testing
         run: |
-          if git diff --name-only HEAD~1 HEAD -- '*.test.ts' '*.test.tsx' package.json bun.lock stryker.config.json | grep -q .; then
-            echo "Test, dependency or config changes detected; forcing a full mutation run."
-            bunx stryker run --force
-          else
-            bun run test:mutation:incremental
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Full mutation run (scheduled or manual)."
+            bun run test:mutation
+            exit 0
           fi
-      # Only save when the run actually refreshed the report. A crash in
-      # writeIncrementalReport (RangeError at this suite size) leaves the
-      # restored entry untouched, and a forced full run without
-      # --incremental never rewrites it either; saving then would duplicate
-      # stale data under a new per-SHA key. A below-threshold score still
-      # writes a fresh report, so this must not be gated on step success.
-      - name: Check whether the incremental report changed
-        id: incremental-changed
-        if: always()
-        run: |
-          if [ -f reports/stryker-incremental.json ]; then
-            after=$(sha256sum reports/stryker-incremental.json | cut -d' ' -f1)
-          else
-            after=missing
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            base="HEAD~1"
           fi
-          if [ "$after" != "${{ steps.incremental-before.outputs.hash }}" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          if ! changed=$(git diff --name-only "$base" HEAD -- 'packages/*/src/**/*.ts' 'packages/*/src/**/*.tsx'); then
+            echo "Could not diff against base; running full mutation to stay sound."
+            bun run test:mutation
+            exit 0
           fi
-      - name: Save Stryker incremental cache
-        if: always() && steps.incremental-changed.outputs.changed == 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: reports/stryker-incremental.json
-          key: stryker-incremental-${{ github.ref_name }}-${{ github.sha }}
+          files=""
+          for f in $changed; do
+            case "$f" in
+              *.test.ts) src="${f%.test.ts}.ts" ;;
+              *.test.tsx) src="${f%.test.tsx}.tsx" ;;
+              *.ts|*.tsx) src="$f" ;;
+              *) continue ;;
+            esac
+            case "$(basename "$src")" in
+              index.ts|bin.ts|lambda-entry.ts) continue ;;
+            esac
+            if [ -f "$src" ]; then
+              files="$files $src"
+            fi
+          done
+          mutate=$(echo "$files" | tr ' ' '\n' | sort -u | grep -v '^$' | paste -sd, - || true)
+          if [ -z "$mutate" ]; then
+            echo "No source or test changes in this push; skipping mutation (weekly full covers the global score)."
+            exit 0
+          fi
+          echo "Testing mutants in: $mutate"
+          bunx stryker run --mutate "$mutate"
       - if: always()
         uses: actions/upload-artifact@v7
         with:

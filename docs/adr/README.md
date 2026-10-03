@@ -30,7 +30,7 @@ commit changes how the system is built, its ADR ships with it.
 | [0019](0019-sign-post-with-lambda-at-edge.md) | Sign CloudFront origin requests with Lambda@Edge so POST works | Accepted | 2026-09-19 |
 | [0019](0019-route-release-trains-by-changed-files.md) | Route release trains by changed files, not commit scope | Accepted | 2026-09-19 |
 | [0020](0020-run-release-trains-in-parallel.md) | Run the release trains in parallel, retrying the push race | Accepted | 2026-09-19 |
-| [0021](0021-incremental-mutation-testing-with-cache.md) | Cache Stryker incremental reports, forcing full runs on test changes | Accepted | 2026-09-20 |
+| [0021](0021-incremental-mutation-testing-with-cache.md) | Cache Stryker incremental reports, forcing full runs on test changes | Accepted; CI cache superseded by [0046](0046-diff-scoped-mutation-with-weekly-full.md) (local opt-in remains) | 2026-09-20 |
 | [0022](0022-srp-heuristic-rule.md) | Detect Single Responsibility violations with a dependency-free method-name heuristic | Accepted; language allow-list extended by [0031](0031-srp-java-python-extractors.md) | 2026-09-20 |
 | [0023](0023-react-hydration-frontend.md) | Migrate the web UI to React with selective hydration | Accepted | 2026-09-20 |
 | [0024](0024-jev-backed-srp-rule-adapter.md) | Judge SRP with a Jev-backed Rule adapter to validate the core | Accepted | 2026-09-20 |
@@ -55,6 +55,7 @@ commit changes how the system is built, its ADR ships with it.
 | [0043](0043-optional-domicile-for-non-economic-projects.md) | Imprint domicile optional for personal non-economic projects | Accepted | 2026-09-26 |
 | [0044](0044-analyze-unknown-generically.md) | Analyze unknown languages generically instead of reporting not_applicable | Accepted | 2026-09-26 |
 | [0045](0045-ssm-secret-for-jev-key.md) | Deliver the Jev API key to Lambda from SSM Parameter Store | Accepted | 2026-09-26 |
+| [0046](0046-diff-scoped-mutation-with-weekly-full.md) | Scope push mutation runs to changed files, verify the full score weekly | Accepted | 2026-10-03 |
 
 ## Writing a new ADR
 
