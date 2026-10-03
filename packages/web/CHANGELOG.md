@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/rcasia/principled/compare/web-v1.22.3...web-v1.23.0) (2026-10-03)
+
+
+### Features
+
+* **ci:** scope push mutation runs to changed files ([cf88dcd](https://github.com/rcasia/principled/commit/cf88dcdfe3b5905e6e102bc21d2c1246712ef499))
+
 ## [1.22.3](https://github.com/rcasia/principled/compare/web-v1.22.2...web-v1.22.3) (2026-10-03)
 
 
