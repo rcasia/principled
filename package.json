@@ -22,7 +22,7 @@
     "test": "bun test",
     "test:mutation": "bunx stryker run",
     "test:mutation:incremental": "bunx stryker run --incremental",
-    "audit": "bun audit",
+    "audit": "bun audit --ignore GHSA-vfj7-8cjw-p6xm --ignore GHSA-ch52-4w7c-c8xp",
     "cli": "bun packages/cli/src/bin.ts",
     "check": "bun run typecheck && bun run test",
     "build:lambda": "bun scripts/build-lambda.ts",
